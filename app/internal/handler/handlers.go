@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"hotel.com/app/internal/helper"
+	"hotel.com/app/internal/models"
 	"hotel.com/app/internal/service"
 )
 
@@ -41,4 +43,25 @@ func (h *Handler) readinessCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "ready"})
+}
+
+func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
+	var form models.UserCreation
+	if err := json.NewDecoder(r.Body).Decode(&form); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
+		return
+	}
+
+	if err := h.s.CreateUser(form); err != nil {
+		switch {
+		case helper.IsDuplicate(err):
+			helper.RespondError(w, http.StatusConflict, helper.ErrResourceExists.Error())
+		default:
+			helper.RespondError(w, http.StatusInternalServerError, helper.ErrCreateFailed.Error())
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 }

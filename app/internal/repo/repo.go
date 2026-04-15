@@ -3,13 +3,15 @@
 // providing a clean interface for the service layer to interact with PostgreSQL.
 package repo
 
-import (
-	"context"
-)
+import "hotel.com/app/internal/models"
 
 type ServiceRepository interface {
-	Foo(ctx context.Context) error
 	DbPing() error
+	// CRUD ops
+	Create(models.User, models.Login) error
+	// Read() error
+	// Update() error
+	// Delete() error
 }
 
 //REMEMBER TRANSACTION CODE LOGIC

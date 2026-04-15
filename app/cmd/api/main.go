@@ -46,7 +46,7 @@ func main() {
 	}
 
 	//repo creation
-	r := repo.NewDatabaseRepo(db)
+	r := repo.NewPostgreRepo(db)
 
 	//service creation
 	svc := service.New(l, r)

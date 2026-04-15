@@ -25,9 +25,17 @@ func (h *Handler) NewServerMux() *chi.Mux {
 	r.NotFound(h.notFoundHandler)
 	r.MethodNotAllowed(h.methodNotAllowedHandler)
 
+	//public routes
+	r.Group(func(r chi.Router) {
+		r.Get("/health", h.healthCheck)
+		r.Get("/ready", h.readinessCheck)
+	})
+
 	// Routes
-	r.Get("/health", h.healthCheck)
-	r.Get("/ready", h.readinessCheck)
+	r.Group(func(r chi.Router) {
+		//r.Use(//atuh midleware)
+		r.Post("/create", h.createUser)
+	})
 
 	return r
 }
