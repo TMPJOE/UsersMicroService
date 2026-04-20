@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"net/http"
 	"os"
@@ -187,12 +188,24 @@ func CacheControl(maxAge int) func(http.Handler) http.Handler {
 
 // JWTAuthenticator handles JWT authentication
 type JWTAuthenticator struct {
-	config JWTConfig
+	config     JWTConfig
+	publicKey  map[string]*rsa.PublicKey
+	privateKey *rsa.PrivateKey
 }
 
 // NewJWTAuthenticator creates a new JWT authenticator
 func NewJWTAuthenticator(config JWTConfig) *JWTAuthenticator {
-	return &JWTAuthenticator{config: config}
+	publicKeyData, _ := os.ReadFile("public.pem")
+	privateKeyData, _ := os.ReadFile("private.pem")
+
+	privateKey, _ := jwt.ParseRSAPrivateKeyFromPEM(privateKeyData)
+	publicKey, _ := jwt.ParseRSAPublicKeyFromPEM(publicKeyData)
+
+	return &JWTAuthenticator{
+		config:     config,
+		publicKey:  map[string]*rsa.PublicKey{"key-1": publicKey},
+		privateKey: privateKey,
+	}
 }
 
 // Middleware returns the JWT authentication middleware
@@ -233,14 +246,30 @@ func (j *JWTAuthenticator) Middleware() func(http.Handler) http.Handler {
 	}
 }
 
+//TODO: set key dinamically for key rotation
+
 // ValidateToken validates a JWT token and returns the claims
 func (j *JWTAuthenticator) ValidateToken(tokenString string) (*JWTClaims, error) {
+
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+		kid, ok := token.Header["kid"].(string)
+		if !ok {
 			return nil, helper.ErrInvalidToken
 		}
-		return []byte(j.config.Secret), nil
-	})
+		key, exists := j.publicKey[kid]
+		if !exists {
+			return nil, helper.ErrInvalidToken
+		}
+
+		if token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
+			return nil, helper.ErrInvalidToken
+		}
+		return key, nil
+	},
+		jwt.WithAudience("booking-api"),
+		jwt.WithIssuer(j.config.Issuer),
+		jwt.WithLeeway(5*time.Second),
+	)
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
@@ -254,42 +283,28 @@ func (j *JWTAuthenticator) ValidateToken(tokenString string) (*JWTClaims, error)
 		return nil, helper.ErrInvalidToken
 	}
 
-	// Verify issuer if configured
-	if j.config.Issuer != "" {
-		issuer, err := claims.GetIssuer()
-		if err != nil || issuer != j.config.Issuer {
-			return nil, helper.ErrInvalidToken
-		}
-	}
-
 	return claims, nil
 }
 
 // GenerateToken generates a new JWT token for a user
 func (j *JWTAuthenticator) GenerateToken(userID, email string) (string, error) {
-	privateKeyData, err := os.ReadFile("private.pem")
-	if err != nil {
-		return "", helper.ErrTokenGeneration
-	}
-
-	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyData)
-	if err != nil {
-		return "", helper.ErrTokenGeneration
-	}
 
 	claims := JWTClaims{
 		UserID: userID,
 		Email:  email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.config.Issuer,
+			Audience:  []string{"booking-api"},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.config.Expiration)),
+			NotBefore: jwt.NewNumericDate(time.Now()),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = "key-1"
 
-	return token.SignedString(privateKey)
+	return token.SignedString(j.privateKey)
 }
 
 // GetUserIDFromContext extracts user ID from the request context

@@ -20,10 +20,11 @@ type Handler struct {
 	jwtAuth *JWTAuthenticator
 }
 
-func New(s service.Service, l *slog.Logger) *Handler {
+func New(s service.Service, l *slog.Logger, jwtAuth *JWTAuthenticator) *Handler {
 	return &Handler{
-		s: s,
-		l: l,
+		s:       s,
+		l:       l,
+		jwtAuth: jwtAuth,
 	}
 }
 

@@ -48,6 +48,11 @@ func main() {
 		l.Error("JWT private key file not found", "err", err)
 		os.Exit(-1)
 	}
+	//jwt key file check
+	if _, err := os.Stat("public.pem"); os.IsNotExist(err) {
+		l.Error("JWT private key file not found", "err", err)
+		os.Exit(-1)
+	}
 
 	//repo creation
 	r := repo.NewPostgreRepo(db)
@@ -56,7 +61,13 @@ func main() {
 	svc := service.New(l, r)
 
 	// handler creation
-	h := handler.New(svc, l)
+	jwtConfig := handler.JWTConfig{
+		Secret:     cfg.Server.Host, // This should be a secure secret in production
+		Issuer:     "users-service",
+		Expiration: 24 * time.Minute,
+	}
+	jwtAuth := handler.NewJWTAuthenticator(jwtConfig)
+	h := handler.New(svc, l, jwtAuth)
 
 	// server creation
 	mux := h.NewServerMux(nil)
