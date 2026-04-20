@@ -17,6 +17,7 @@ import (
 type Service interface {
 	Check() error
 	CreateUser(models.UserCreation) error
+	AuthenticateUser(email, password string) (*models.User, error)
 }
 
 type UserService struct {
@@ -82,4 +83,27 @@ func (s *UserService) CreateUser(usr models.UserCreation) error {
 	}
 
 	return nil
+}
+
+func (s *UserService) AuthenticateUser(email, password string) (*models.User, error) {
+	// Get user and login info by email
+	user, login, err := s.r.GetUserByEmail(email)
+	if err != nil {
+		if errors.Is(err, helper.ErrRecordNotFound) {
+			return nil, helper.ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	// Check if account is locked
+	if login.IsLocked {
+		return nil, helper.ErrPermissionDenied
+	}
+
+	// Verify password
+	if err := bcrypt.CompareHashAndPassword([]byte(login.PswHash), []byte(password)); err != nil {
+		return nil, helper.ErrInvalidCredentials
+	}
+
+	return user, nil
 }

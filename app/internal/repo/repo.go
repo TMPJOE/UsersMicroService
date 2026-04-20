@@ -9,6 +9,7 @@ type ServiceRepository interface {
 	DbPing() error
 	// CRUD ops
 	Create(models.User, models.Login) error
+	GetUserByEmail(email string) (*models.User, *models.Login, error)
 	// Read() error
 	// Update() error
 	// Delete() error

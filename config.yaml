@@ -1,0 +1,36 @@
+# API Gateway Configuration
+server:
+  host: "0.0.0.0"
+  port: 8080
+  read_timeout: 15s
+  write_timeout: 15s
+  idle_timeout: 60s
+
+logging:
+  level: "info"
+  format: "json"
+
+rate_limit:
+  enabled: true
+  requests_per_second: 100
+  burst: 200
+
+circuit_breaker:
+  enabled: true
+  max_failures: 5
+  timeout: 30s
+
+# JWT Configuration
+jwt:
+  secret: "${JWT_SECRET}"
+  issuer: "hotel-api"
+  expiration: 24h
+
+# Database Configuration
+database:
+  url: "${DB_URL}"
+
+# Health check configuration
+health:
+  path: "/health"
+  ready_path: "/ready"

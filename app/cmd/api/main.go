@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -18,9 +19,12 @@ import (
 )
 
 type Config struct {
-	Port     string
-	DbUrl    string
-	LogLevel string
+	Port               string
+	DbUrl              string
+	LogLevel           string
+	JWTSecret          string
+	JWTIssuer          string
+	JWTExpirationHours string
 }
 
 func main() {
@@ -45,17 +49,36 @@ func main() {
 		os.Exit(-1)
 	}
 
+	// JWT authenticator
+	if config.JWTSecret == "" {
+		l.Error("JWT secret not configured")
+		os.Exit(-1)
+	}
+
+	expHrs, err := strconv.Atoi(config.JWTExpirationHours)
+	if err != nil {
+		l.Error("JWT expiration parse error, defaulting to 24h", "err", err.Error())
+		expHrs = 24
+	}
+
+	jwtConfig := handler.JWTConfig{
+		Secret:     config.JWTSecret,
+		Issuer:     config.JWTIssuer,
+		Expiration: time.Duration(expHrs) * time.Hour,
+	}
+	jwtAuth := handler.NewJWTAuthenticator(jwtConfig)
+
 	//repo creation
 	r := repo.NewPostgreRepo(db)
 
 	//service creation
 	svc := service.New(l, r)
 
-	//hanlder creation
-	h := handler.New(svc, l)
+	// handler creation
+	h := handler.New(svc, l, jwtAuth)
 
-	//server creation
-	mux := h.NewServerMux()
+	// server creation
+	mux := h.NewServerMux(jwtAuth, nil)
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%s", config.Port),
 		Handler: mux,
@@ -90,8 +113,11 @@ func main() {
 
 func loadConfig() *Config {
 	return &Config{
-		Port:     helper.Getenv("APP_PORT", "8080"),
-		LogLevel: helper.Getenv("LOG_LEVEL", "0"),
-		DbUrl:    os.Getenv("DB_URL"),
+		Port:               helper.Getenv("APP_PORT", "8080"),
+		LogLevel:           helper.Getenv("LOG_LEVEL", "0"),
+		DbUrl:              os.Getenv("DB_URL"),
+		JWTSecret:          helper.Getenv("JWT_SECRET", ""),
+		JWTIssuer:          helper.Getenv("JWT_ISSUER", ""),
+		JWTExpirationHours: helper.Getenv("JWT_EXPIRATION_HOURS", "24"),
 	}
 }

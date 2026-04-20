@@ -14,14 +14,16 @@ import (
 )
 
 type Handler struct {
-	s service.Service
-	l *slog.Logger
+	s       service.Service
+	l       *slog.Logger
+	jwtAuth *JWTAuthenticator
 }
 
-func New(s service.Service, l *slog.Logger) *Handler {
+func New(s service.Service, l *slog.Logger, jwtAuth *JWTAuthenticator) *Handler {
 	return &Handler{
-		s: s,
-		l: l,
+		s:       s,
+		l:       l,
+		jwtAuth: jwtAuth,
 	}
 }
 
@@ -64,4 +66,55 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+}
+
+// loginUser handles user login and returns a JWT token
+func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
+	var credentials struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
+		return
+	}
+
+	if credentials.Email == "" || credentials.Password == "" {
+		helper.RespondError(w, http.StatusBadRequest, helper.ErrMissingField.Error())
+		return
+	}
+
+	// Authenticate user through service layer
+	user, err := h.s.AuthenticateUser(credentials.Email, credentials.Password)
+	if err != nil {
+		switch {
+		case err == helper.ErrInvalidCredentials:
+			helper.RespondError(w, http.StatusUnauthorized, helper.ErrInvalidCredentials.Error())
+		case err == helper.ErrRecordNotFound:
+			helper.RespondError(w, http.StatusUnauthorized, helper.ErrInvalidCredentials.Error())
+		default:
+			helper.RespondError(w, http.StatusInternalServerError, helper.ErrProcessingFailed.Error())
+		}
+		return
+	}
+
+	// Generate JWT token
+	if h.jwtAuth == nil {
+		helper.RespondError(w, http.StatusInternalServerError, "authentication not configured")
+		return
+	}
+
+	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
+	if err != nil {
+		helper.RespondError(w, http.StatusInternalServerError, helper.ErrTokenGeneration.Error())
+		return
+	}
+
+	// Return token response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"token": token,
+	})
 }
