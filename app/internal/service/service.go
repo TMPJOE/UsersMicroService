@@ -18,6 +18,7 @@ type Service interface {
 	Check() error
 	CreateUser(models.UserCreation) error
 	AuthenticateUser(email, password string) (*models.User, error)
+	GetProfile(userID string) (*models.UserIO, error)
 }
 
 type UserService struct {
@@ -105,5 +106,17 @@ func (s *UserService) AuthenticateUser(email, password string) (*models.User, er
 		return nil, helper.ErrInvalidCredentials
 	}
 
+	return user, nil
+}
+
+func (s *UserService) GetProfile(userID string) (*models.UserIO, error) {
+	// Get user by ID
+	user, err := s.r.GetUserByID(userID)
+	if err != nil {
+		if errors.Is(err, helper.ErrRecordNotFound) {
+			return nil, helper.ErrRecordNotFound
+		}
+		return nil, helper.ErrProcessingFailed
+	}
 	return user, nil
 }

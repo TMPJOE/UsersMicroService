@@ -6,36 +6,30 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
+	"hotel.com/app/internal/config"
 	"hotel.com/app/internal/database"
 	"hotel.com/app/internal/handler"
-	"hotel.com/app/internal/helper"
 	"hotel.com/app/internal/logging"
 	"hotel.com/app/internal/repo"
 	"hotel.com/app/internal/service"
 )
 
-type Config struct {
-	Port               string
-	DbUrl              string
-	LogLevel           string
-	JWTSecret          string
-	JWTIssuer          string
-	JWTExpirationHours string
-}
-
 func main() {
-	config := loadConfig()
+	cfg, err := config.Load("config.yaml")
+	if err != nil {
+		fmt.Println("failed to load config:", err)
+		os.Exit(1)
+	}
 
 	//create logger
 	l := logging.New()
 	l.Info("App initiated")
 
 	//db connection
-	db, err := database.NewConn(config.DbUrl)
+	db, err := database.NewConn(os.Getenv("USER_SERVICE_DATABASE_URL"))
 	if err != nil {
 		l.Error("Conection to database failed", "err", err)
 		os.Exit(-1)
@@ -44,29 +38,16 @@ func main() {
 
 	defer db.Close()
 
-	err = database.RunMigrations(config.DbUrl, l)
+	err = database.RunMigrations(os.Getenv("USER_SERVICE_DATABASE_URL"), l)
 	if err != nil {
 		os.Exit(-1)
 	}
 
-	// JWT authenticator
-	if config.JWTSecret == "" {
-		l.Error("JWT secret not configured")
+	//jwt key file check
+	if _, err := os.Stat("private.pem"); os.IsNotExist(err) {
+		l.Error("JWT private key file not found", "err", err)
 		os.Exit(-1)
 	}
-
-	expHrs, err := strconv.Atoi(config.JWTExpirationHours)
-	if err != nil {
-		l.Error("JWT expiration parse error, defaulting to 24h", "err", err.Error())
-		expHrs = 24
-	}
-
-	jwtConfig := handler.JWTConfig{
-		Secret:     config.JWTSecret,
-		Issuer:     config.JWTIssuer,
-		Expiration: time.Duration(expHrs) * time.Hour,
-	}
-	jwtAuth := handler.NewJWTAuthenticator(jwtConfig)
 
 	//repo creation
 	r := repo.NewPostgreRepo(db)
@@ -75,12 +56,16 @@ func main() {
 	svc := service.New(l, r)
 
 	// handler creation
-	h := handler.New(svc, l, jwtAuth)
+	h := handler.New(svc, l)
 
 	// server creation
-	mux := h.NewServerMux(jwtAuth, nil)
+	mux := h.NewServerMux(nil)
+	port := cfg.Server.Port
+	if port == 0 {
+		port = 8080
+	}
 	srv := &http.Server{
-		Addr:    fmt.Sprintf(":%s", config.Port),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 
@@ -111,13 +96,4 @@ func main() {
 
 }
 
-func loadConfig() *Config {
-	return &Config{
-		Port:               helper.Getenv("APP_PORT", "8080"),
-		LogLevel:           helper.Getenv("LOG_LEVEL", "0"),
-		DbUrl:              os.Getenv("DB_URL"),
-		JWTSecret:          helper.Getenv("JWT_SECRET", ""),
-		JWTIssuer:          helper.Getenv("JWT_ISSUER", ""),
-		JWTExpirationHours: helper.Getenv("JWT_EXPIRATION_HOURS", "24"),
-	}
-}
+// configuration is loaded from app/internal/config package

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -266,6 +267,16 @@ func (j *JWTAuthenticator) ValidateToken(tokenString string) (*JWTClaims, error)
 
 // GenerateToken generates a new JWT token for a user
 func (j *JWTAuthenticator) GenerateToken(userID, email string) (string, error) {
+	privateKeyData, err := os.ReadFile("private.pem")
+	if err != nil {
+		return "", helper.ErrTokenGeneration
+	}
+
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privateKeyData)
+	if err != nil {
+		return "", helper.ErrTokenGeneration
+	}
+
 	claims := JWTClaims{
 		UserID: userID,
 		Email:  email,
@@ -276,8 +287,9 @@ func (j *JWTAuthenticator) GenerateToken(userID, email string) (string, error) {
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(j.config.Secret))
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	return token.SignedString(privateKey)
 }
 
 // GetUserIDFromContext extracts user ID from the request context

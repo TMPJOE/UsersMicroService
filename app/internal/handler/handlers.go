@@ -5,6 +5,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -19,11 +20,10 @@ type Handler struct {
 	jwtAuth *JWTAuthenticator
 }
 
-func New(s service.Service, l *slog.Logger, jwtAuth *JWTAuthenticator) *Handler {
+func New(s service.Service, l *slog.Logger) *Handler {
 	return &Handler{
-		s:       s,
-		l:       l,
-		jwtAuth: jwtAuth,
+		s: s,
+		l: l,
 	}
 }
 
@@ -70,10 +70,7 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 
 // loginUser handles user login and returns a JWT token
 func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
-	var credentials struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var credentials models.LoginInput
 
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
 		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
@@ -85,13 +82,13 @@ func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authenticate user through service layer
+	// Authenticate user
 	user, err := h.s.AuthenticateUser(credentials.Email, credentials.Password)
 	if err != nil {
-		switch {
-		case err == helper.ErrInvalidCredentials:
+		switch err {
+		case helper.ErrInvalidCredentials:
 			helper.RespondError(w, http.StatusUnauthorized, helper.ErrInvalidCredentials.Error())
-		case err == helper.ErrRecordNotFound:
+		case helper.ErrRecordNotFound:
 			helper.RespondError(w, http.StatusUnauthorized, helper.ErrInvalidCredentials.Error())
 		default:
 			helper.RespondError(w, http.StatusInternalServerError, helper.ErrProcessingFailed.Error())
@@ -111,10 +108,32 @@ func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return token response
+	// Return token response (include token_type for client usage)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"token": token,
+		"access_token": token,
+		"token_type":   "Bearer",
 	})
+}
+
+func (h *Handler) getProfile(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDFromRequest(r)
+	if userID == "" {
+		helper.RespondError(w, http.StatusUnauthorized, helper.ErrUnauthorized.Error())
+		return
+	}
+	profile, err := h.s.GetProfile(userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, helper.ErrRecordNotFound):
+			helper.RespondError(w, http.StatusNotFound, helper.ErrNotFound.Error())
+		default:
+			helper.RespondError(w, http.StatusInternalServerError, helper.ErrFetchFailed.Error())
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(profile)
 }

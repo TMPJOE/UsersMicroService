@@ -24,6 +24,7 @@ type UserCreation struct {
 type UserIO struct {
 	Email       string `json:"email"`
 	DisplayName string `json:"display_name"`
+	CreatedAt   string `json:"created_at"`
 }
 
 type Login struct {

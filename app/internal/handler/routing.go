@@ -9,7 +9,7 @@ import (
 	"hotel.com/app/internal/helper"
 )
 
-func (h *Handler) NewServerMux(jwtAuth *JWTAuthenticator, rateLimiter *RateLimiter) *chi.Mux {
+func (h *Handler) NewServerMux(rateLimiter *RateLimiter) *chi.Mux {
 	r := chi.NewRouter()
 
 	// Global middleware
@@ -40,11 +40,10 @@ func (h *Handler) NewServerMux(jwtAuth *JWTAuthenticator, rateLimiter *RateLimit
 
 	// Protected routes - require JWT authentication
 	r.Group(func(r chi.Router) {
-		if jwtAuth != nil {
-			r.Use(jwtAuth.Middleware())
-		}
+		r.Use(h.jwtAuth.Middleware()) // JWT authentication middleware
+
 		// Add protected routes here, e.g.:
-		// r.Get("/profile", h.getProfile)
+		r.Get("/profile", h.getProfile)
 		// r.Put("/profile", h.updateProfile)
 		// r.Post("/logout", h.logout)
 	})

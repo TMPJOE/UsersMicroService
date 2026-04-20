@@ -10,6 +10,7 @@ type ServiceRepository interface {
 	// CRUD ops
 	Create(models.User, models.Login) error
 	GetUserByEmail(email string) (*models.User, *models.Login, error)
+	GetUserByID(id string) (*models.UserIO, error)
 	// Read() error
 	// Update() error
 	// Delete() error
