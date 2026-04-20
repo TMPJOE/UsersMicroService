@@ -36,8 +36,12 @@ func New(l *slog.Logger, r repo.ServiceRepository) Service {
 func (s *UserService) Check() error {
 	s.l.Info("Pinging db...")
 	err := s.r.DbPing()
-	s.l.Info("is service working", "err", err.Error())
-	return err
+	if err != nil {
+		s.l.Error("db ping failed", "err", err.Error())
+		return err
+	}
+	s.l.Info("db ping successful")
+	return nil
 }
 
 func (s *UserService) CreateUser(usr models.UserCreation) error {
