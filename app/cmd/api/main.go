@@ -17,6 +17,11 @@ import (
 	"hotel.com/app/internal/service"
 )
 
+const (
+	publicKeyPath  = "/app/keys/public.pem"
+	privateKeyPath = "/app/keys/private.pem"
+)
+
 func main() {
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
@@ -29,7 +34,7 @@ func main() {
 	l.Info("App initiated")
 
 	//db connection
-	db, err := database.NewConn(os.Getenv("USER_SERVICE_DATABASE_URL"))
+	db, err := database.NewConn(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		l.Error("Conection to database failed", "err", err)
 		os.Exit(-1)
@@ -38,19 +43,19 @@ func main() {
 
 	defer db.Close()
 
-	err = database.RunMigrations(os.Getenv("USER_SERVICE_DATABASE_URL"), l)
+	err = database.RunMigrations(os.Getenv("DATABASE_URL"), l)
 	if err != nil {
 		os.Exit(-1)
 	}
 
 	//jwt key file check
-	if _, err := os.Stat("private.pem"); os.IsNotExist(err) {
+	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
 		l.Error("JWT private key file not found", "err", err)
 		os.Exit(-1)
 	}
 	//jwt key file check
-	if _, err := os.Stat("public.pem"); os.IsNotExist(err) {
-		l.Error("JWT private key file not found", "err", err)
+	if _, err := os.Stat(publicKeyPath); os.IsNotExist(err) {
+		l.Error("JWT public key file not found", "err", err)
 		os.Exit(-1)
 	}
 
@@ -62,7 +67,6 @@ func main() {
 
 	// handler creation
 	jwtConfig := handler.JWTConfig{
-		Secret:     cfg.Server.Host, // This should be a secure secret in production
 		Issuer:     "users-service",
 		Expiration: 24 * time.Minute,
 	}
