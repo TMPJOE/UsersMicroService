@@ -101,6 +101,8 @@ func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.l.Info("User authenticated", "userID", user.ID, "email", user.Email)
+
 	// Generate JWT token
 	if h.jwtAuth == nil {
 		helper.RespondError(w, http.StatusInternalServerError, "authentication not configured")
@@ -141,4 +143,29 @@ func (h *Handler) getProfile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(profile)
+}
+
+func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserIDFromRequest(r)
+	if userID == "" {
+		helper.RespondError(w, http.StatusUnauthorized, helper.ErrUnauthorized.Error())
+		return
+	}
+	var user models.UserIO
+	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
+		return
+	}
+	if err := h.s.UpdateProfile(user.DisplayName, userID); err != nil {
+		switch {
+		case errors.Is(err, helper.ErrRecordNotFound):
+			helper.RespondError(w, http.StatusNotFound, helper.ErrNotFound.Error())
+		default:
+			helper.RespondError(w, http.StatusInternalServerError, helper.ErrUpdateFailed.Error())
+		}
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "profile updated"})
 }

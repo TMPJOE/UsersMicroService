@@ -45,8 +45,7 @@ func (h *Handler) NewServerMux(rateLimiter *RateLimiter) *chi.Mux {
 
 		// Add protected routes here, e.g.:
 		r.Get("/profile", h.getProfile)
-		// r.Put("/profile", h.updateProfile)
-		// r.Post("/logout", h.logout)
+		r.Put("/profile", h.updateProfile)
 	})
 
 	return r

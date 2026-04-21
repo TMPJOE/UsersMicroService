@@ -11,8 +11,8 @@ type ServiceRepository interface {
 	Create(models.User, models.Login) error
 	GetUserByEmail(email string) (*models.User, *models.Login, error)
 	GetUserByID(id string) (*models.UserIO, error)
-	// Read() error
-	// Update() error
+	UpdateLastLogin(userID string) error
+	Update(displayName, userID string) error
 	// Delete() error
 }
 

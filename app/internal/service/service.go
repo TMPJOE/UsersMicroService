@@ -19,6 +19,7 @@ type Service interface {
 	CreateUser(models.UserCreation) error
 	AuthenticateUser(email, password string) (*models.User, error)
 	GetProfile(userID string) (*models.UserIO, error)
+	UpdateProfile(displayName, userID string) error
 }
 
 type UserService struct {
@@ -110,6 +111,11 @@ func (s *UserService) AuthenticateUser(email, password string) (*models.User, er
 		return nil, helper.ErrInvalidCredentials
 	}
 
+	// Update last login time
+	if err := s.r.UpdateLastLogin(user.ID); err != nil {
+		s.l.Error("Failed to update last login", "userID", user.ID, "err", err.Error())
+	}
+
 	return user, nil
 }
 
@@ -123,4 +129,15 @@ func (s *UserService) GetProfile(userID string) (*models.UserIO, error) {
 		return nil, helper.ErrProcessingFailed
 	}
 	return user, nil
+}
+
+func (s *UserService) UpdateProfile(displayName, userID string) error {
+	err := s.r.Update(displayName, userID)
+	if err != nil {
+		if errors.Is(err, helper.ErrRecordNotFound) {
+			return helper.ErrNotFound
+		}
+		return helper.ErrProcessingFailed
+	}
+	return nil
 }
