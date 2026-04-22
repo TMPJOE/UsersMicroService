@@ -34,8 +34,9 @@ type JWTConfig struct {
 
 // JWTClaims represents the JWT claims structure
 type JWTClaims struct {
-	UserID string `json:"user_id"`
-	Email  string `json:"email"`
+	UserID   string `json:"user_id"`
+	Email    string `json:"email"`
+	UserType string `json:"user_type"`
 	jwt.RegisteredClaims
 }
 
@@ -287,11 +288,12 @@ func (j *JWTAuthenticator) ValidateToken(tokenString string) (*JWTClaims, error)
 }
 
 // GenerateToken generates a new JWT token for a user
-func (j *JWTAuthenticator) GenerateToken(userID, email string) (string, error) {
+func (j *JWTAuthenticator) GenerateToken(userID, email, userType string) (string, error) {
 
 	claims := JWTClaims{
-		UserID: userID,
-		Email:  email,
+		UserID:   userID,
+		Email:    email,
+		UserType: userType,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    j.config.Issuer,
 			Audience:  []string{"booking-api"},

@@ -109,7 +109,7 @@ func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email)
+	token, err := h.jwtAuth.GenerateToken(user.ID, user.Email, user.UserType)
 	if err != nil {
 		helper.RespondError(w, http.StatusInternalServerError, helper.ErrTokenGeneration.Error())
 		return

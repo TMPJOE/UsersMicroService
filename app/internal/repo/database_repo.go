@@ -123,9 +123,16 @@ func (r *postgreRepo) UpdateLastLogin(userID string) error {
 
 func (r *postgreRepo) Update(displayName, userID string) error {
 	stmt := "UPDATE users SET display_name = $1, updated_at = NOW() WHERE id = $2"
-	_, err := r.db.Exec(context.Background(), stmt, displayName)
+
+	tag, err := r.db.Exec(context.Background(), stmt, displayName, userID)
 	if err != nil {
 		return fmt.Errorf("update user: %w", helper.MapError(err))
 	}
+
+	// Si no actualizó ninguna fila, el usuario no existe
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("update user: %w", helper.ErrRecordNotFound)
+	}
+
 	return nil
 }
