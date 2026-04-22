@@ -70,7 +70,7 @@ func main() {
 		Issuer:     "users-service",
 		Expiration: 24 * time.Minute,
 	}
-	jwtAuth := handler.NewJWTAuthenticator(jwtConfig)
+	jwtAuth := handler.NewJWTAuthenticator(jwtConfig, privateKeyPath, publicKeyPath)
 	h := handler.New(svc, l, jwtAuth)
 
 	// server creation

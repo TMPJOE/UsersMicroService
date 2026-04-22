@@ -151,7 +151,7 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 		helper.RespondError(w, http.StatusUnauthorized, helper.ErrUnauthorized.Error())
 		return
 	}
-	var user models.UserIO
+	var user models.UserUpdate
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
 		return

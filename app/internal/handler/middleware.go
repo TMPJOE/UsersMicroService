@@ -194,9 +194,9 @@ type JWTAuthenticator struct {
 }
 
 // NewJWTAuthenticator creates a new JWT authenticator
-func NewJWTAuthenticator(config JWTConfig) *JWTAuthenticator {
-	publicKeyData, _ := os.ReadFile("public.pem")
-	privateKeyData, _ := os.ReadFile("private.pem")
+func NewJWTAuthenticator(config JWTConfig, privateKeyPath, publicKeyPath string) *JWTAuthenticator {
+	publicKeyData, _ := os.ReadFile(publicKeyPath)
+	privateKeyData, _ := os.ReadFile(privateKeyPath)
 
 	privateKey, _ := jwt.ParseRSAPrivateKeyFromPEM(privateKeyData)
 	publicKey, _ := jwt.ParseRSAPublicKeyFromPEM(publicKeyData)
@@ -326,16 +326,18 @@ func CORS(next http.Handler) http.Handler {
 
 // GetUserIDFromContext extracts user ID from the request context
 func GetUserIDFromContext(ctx context.Context) string {
-	if userID, ok := ctx.Value(UserIDKey).(string); ok {
-		return userID
+	claims := GetClaimsFromContext(ctx)
+	if claims != nil {
+		return claims.UserID
 	}
 	return ""
 }
 
 // GetUserEmailFromContext extracts user email from the request context
 func GetUserEmailFromContext(ctx context.Context) string {
-	if email, ok := ctx.Value(UserEmailKey).(string); ok {
-		return email
+	claims := GetClaimsFromContext(ctx)
+	if claims != nil {
+		return claims.Email
 	}
 	return ""
 }

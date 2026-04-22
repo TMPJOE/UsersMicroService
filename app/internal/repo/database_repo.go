@@ -78,10 +78,11 @@ func (r *postgreRepo) GetUserByEmail(email string) (*models.User, *models.Login,
 	}
 
 	// Get login info
-	loginStmt := "SELECT id, password_hash, last_login, failed_attempts, is_locked, user_id FROM logins WHERE user_id = $1"
+	loginStmt := "SELECT id, password_hash, failed_attempts, is_locked, user_id FROM logins WHERE user_id = $1"
 	var login models.Login
+
 	err = r.db.QueryRow(context.Background(), loginStmt, user.ID).Scan(
-		&login.ID, &login.PswHash, &login.LastLogin, &login.FailedAttempts,
+		&login.ID, &login.PswHash, &login.FailedAttempts,
 		&login.IsLocked, &login.UserID,
 	)
 	if err != nil {

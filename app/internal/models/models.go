@@ -22,9 +22,13 @@ type UserCreation struct {
 }
 
 type UserIO struct {
-	Email       string `json:"email"`
+	Email       string    `json:"email"`
+	DisplayName string    `json:"display_name"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type UserUpdate struct {
 	DisplayName string `json:"display_name"`
-	UpdatedAt   string `json:"updated_at"`
 }
 
 type Login struct {

@@ -13,7 +13,7 @@ import (
 func New() *slog.Logger {
 	logFormat := httplog.SchemaECS.Concise(true)
 	// handler options
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		ReplaceAttr: logFormat.ReplaceAttr,
 	})).With(
 		slog.String("service", "user-service"),
