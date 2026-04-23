@@ -67,12 +67,18 @@ func (s *UserService) CreateUser(usr models.UserCreation) error {
 		return err
 	}
 
+	// Default to "user" if no user_type provided
+	userType := usr.UserType
+	if userType == "" {
+		userType = "user"
+	}
+
 	// prepare data for repo
 	user := models.User{
 		ID:          userID.String(),
 		Email:       usr.Email,
 		DisplayName: usr.DisplayName,
-		UserType:    "user",
+		UserType:    userType,
 	}
 	lgg := models.Login{
 		ID:      idPsw.String(),
@@ -82,6 +88,7 @@ func (s *UserService) CreateUser(usr models.UserCreation) error {
 
 	err = s.r.Create(user, lgg)
 	if err != nil {
+		s.l.Error("failed to create user in db", "err", err.Error())
 		if errors.Is(err, helper.ErrDuplicateEntry) {
 			return helper.ErrResourceExists
 		}

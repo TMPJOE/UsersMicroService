@@ -61,8 +61,8 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.s.CreateUser(form); err != nil {
 		switch {
-		case helper.IsDuplicate(err):
-			helper.RespondError(w, http.StatusConflict, helper.ErrResourceExists.Error())
+		case errors.Is(err, helper.ErrResourceExists):
+			helper.RespondError(w, http.StatusConflict, "an account with this email already exists")
 		default:
 			helper.RespondError(w, http.StatusInternalServerError, helper.ErrCreateFailed.Error())
 		}

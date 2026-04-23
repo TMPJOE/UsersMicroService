@@ -19,6 +19,7 @@ type UserCreation struct {
 	Email       string `json:"email" db:"email"`
 	DisplayName string `json:"display_name" db:"display_name"`
 	Password    string `json:"password"`
+	UserType    string `json:"user_type" db:"user_type"`
 }
 
 type UserIO struct {

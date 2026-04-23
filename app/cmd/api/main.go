@@ -34,7 +34,7 @@ func main() {
 	l.Info("App initiated")
 
 	//db connection
-	db, err := database.NewConn(os.Getenv("USER_SERVICE_DATABASE_URL"))
+	db, err := database.NewConn(os.Getenv("DATABASE_URL"))
 	if err != nil {
 		l.Error("Conection to database failed", "err", err)
 		os.Exit(-1)
@@ -43,7 +43,7 @@ func main() {
 
 	defer db.Close()
 
-	err = database.RunMigrations(os.Getenv("USER_SERVICE_DATABASE_URL"), l)
+	err = database.RunMigrations(os.Getenv("DATABASE_URL"), l)
 	if err != nil {
 		os.Exit(-1)
 	}
