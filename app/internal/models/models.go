@@ -3,7 +3,9 @@
 // to ensure consistency between repository, service, and handler layers.
 package models
 
-import "time"
+import (
+	"time"
+)
 
 type User struct {
 	ID          string    `json:"id" db:"id"`
@@ -16,20 +18,20 @@ type User struct {
 }
 
 type UserCreation struct {
-	Email       string `json:"email" db:"email"`
-	DisplayName string `json:"display_name" db:"display_name"`
-	Password    string `json:"password"`
-	UserType    string `json:"user_type" db:"user_type"`
+	Email       string `json:"email" db:"email" validate:"required,email"`
+	DisplayName string `json:"display_name" db:"display_name" validate:"required,min=3,max=50"`
+	Password    string `json:"password" db:"-" validate:"required,min=8"`
+	UserType    string `json:"user_type" db:"user_type" validate:"omitempty,oneof=admin user receptionist"`
 }
 
 type UserIO struct {
-	Email       string    `json:"email"`
-	DisplayName string    `json:"display_name"`
+	Email       string    `json:"email" db:"email" validate:"required,email"`
+	DisplayName string    `json:"display_name" db:"display_name" validate:"required,min=3,max=50"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type UserUpdate struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" db:"display_name" validate:"required,min=3,max=50"`
 }
 
 type Login struct {
@@ -42,6 +44,6 @@ type Login struct {
 }
 
 type LoginInput struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" db:"email" validate:"required,email"`
+	Password string `json:"password" db:"-" validate:"required,min=8"`
 }

@@ -12,6 +12,7 @@ import (
 	"hotel.com/app/internal/config"
 	"hotel.com/app/internal/database"
 	"hotel.com/app/internal/handler"
+	"hotel.com/app/internal/helper"
 	"hotel.com/app/internal/logging"
 	"hotel.com/app/internal/repo"
 	"hotel.com/app/internal/service"
@@ -71,7 +72,10 @@ func main() {
 		Expiration: 24 * time.Minute,
 	}
 	jwtAuth := handler.NewJWTAuthenticator(jwtConfig, privateKeyPath, publicKeyPath)
-	h := handler.New(svc, l, jwtAuth)
+
+	v := helper.NewValidator()
+
+	h := handler.New(svc, l, jwtAuth, v)
 
 	// server creation
 	mux := h.NewServerMux(nil)

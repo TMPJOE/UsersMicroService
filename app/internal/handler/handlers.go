@@ -18,13 +18,15 @@ type Handler struct {
 	s       service.Service
 	l       *slog.Logger
 	jwtAuth *JWTAuthenticator
+	v       *helper.RequestValidator
 }
 
-func New(s service.Service, l *slog.Logger, jwtAuth *JWTAuthenticator) *Handler {
+func New(s service.Service, l *slog.Logger, jwtAuth *JWTAuthenticator, v *helper.RequestValidator) *Handler {
 	return &Handler{
 		s:       s,
 		l:       l,
 		jwtAuth: jwtAuth,
+		v:       v,
 	}
 }
 
@@ -59,6 +61,11 @@ func (h *Handler) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.v.Validate(form); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	if err := h.s.CreateUser(form); err != nil {
 		switch {
 		case errors.Is(err, helper.ErrResourceExists):
@@ -82,8 +89,8 @@ func (h *Handler) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if credentials.Email == "" || credentials.Password == "" {
-		helper.RespondError(w, http.StatusBadRequest, helper.ErrMissingField.Error())
+	if err := h.v.Validate(credentials); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -154,6 +161,10 @@ func (h *Handler) updateProfile(w http.ResponseWriter, r *http.Request) {
 	var user models.UserUpdate
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		helper.RespondError(w, http.StatusBadRequest, helper.ErrInvalidInput.Error())
+		return
+	}
+	if err := h.v.Validate(user); err != nil {
+		helper.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err := h.s.UpdateProfile(user.DisplayName, userID); err != nil {
