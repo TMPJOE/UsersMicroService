@@ -25,8 +25,10 @@ type UserCreation struct {
 }
 
 type UserIO struct {
+	ID          string    `json:"id" db:"id"`
 	Email       string    `json:"email" db:"email" validate:"required,email"`
 	DisplayName string    `json:"display_name" db:"display_name" validate:"required,min=3,max=50"`
+	UserType    string    `json:"user_type" db:"user_type"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
