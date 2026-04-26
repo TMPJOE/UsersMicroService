@@ -94,11 +94,11 @@ func (r *postgreRepo) GetUserByEmail(email string) (*models.User, *models.Login,
 
 func (r *postgreRepo) GetUserByID(id string) (*models.UserIO, error) {
 	// Get user by ID
-	userStmt := "SELECT email, display_name, updated_at, is_active FROM users WHERE id = $1"
+	userStmt := "SELECT id, email, display_name, user_type, updated_at, is_active FROM users WHERE id = $1"
 	var user models.UserIO
 	var isActive bool
 	err := r.db.QueryRow(context.Background(), userStmt, id).Scan(
-		&user.Email, &user.DisplayName, &user.UpdatedAt, &isActive,
+		&user.ID, &user.Email, &user.DisplayName, &user.UserType, &user.UpdatedAt, &isActive,
 	)
 
 	if err != nil {
