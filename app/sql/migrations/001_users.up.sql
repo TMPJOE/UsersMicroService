@@ -1,5 +1,5 @@
 CREATE TABLE users (
-    id VARCHAR PRIMARY KEY,
+    id UUID PRIMARY KEY,
     email VARCHAR UNIQUE NOT NULL,
     display_name VARCHAR,
     user_type VARCHAR,
