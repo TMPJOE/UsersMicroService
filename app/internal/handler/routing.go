@@ -20,7 +20,6 @@ func (h *Handler) NewServerMux(rateLimiter *RateLimiter) *chi.Mux {
 	}))
 	r.Use(SecureHeaders)
 	r.Use(RequestID)
-	r.Use(CORS)
 
 	// Apply rate limiting if enabled
 	if rateLimiter != nil {
